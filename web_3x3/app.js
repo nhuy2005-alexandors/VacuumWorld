@@ -163,8 +163,7 @@ function renderCharts() {
 // ---------- Cay duyet (vis-network) ----------
 // Trang thai gon cho nhan node: "R@6 · bẩn{4,20}" (hoac "sạch" khi het ban).
 function stateRepr(s) {
-  const dirty = s.dirt.filter((d) => d !== -1);
-  return `R@${s.robot} · ${dirty.length ? "bẩn{" + dirty.join(",") + "}" : "sạch"}`;
+  return `(R${s.robot}, ${s.dirt.join(", ")})`;
 }
 let network = null;
 function drawTree() {
