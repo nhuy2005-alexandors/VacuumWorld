@@ -1,0 +1,17 @@
+# Tệp thực thi
+*.exe
+*.o
+*.dll
+*.so
+*.dylib
+
+# Thư mục build
+build/
+c/build/
+
+# Các thư mục hệ thống / IDE
+.vscode/
+.claude/
+.claudeignore
+node_modules/
+.DS_Store

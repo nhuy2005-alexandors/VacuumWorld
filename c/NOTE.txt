@@ -1,0 +1,6 @@
+gcc -O2 -o vacuum c\vacuum.c .\vacuum.exe
+SolLen — số bước lời giải. Nhỏ = tốt. Tối ưu = ngắn nhất. (BFS/IDS/A* = 20, DFS = 24 vì DFS không tối ưu.)
+Expanded — số node lấy ra khỏi frontier để mở rộng (đem đi sinh con). Đây là chỉ số "công tính toán" chuẩn nhất. IDS = 4.5M vì lặp lại từ đầu mỗi vòng sâu dần.
+Generated — tổng node sinh ra (con của các node đã mở). Luôn ≥ Expanded.
+PeakFront — số node tồn nhiều nhất trong frontier cùng lúc ≈ đỉnh bộ nhớ. IDS thấp nhất (19) → đây là điểm mạnh của IDS bù cho Expanded khủng.
+Time(ms) — thời gian chạy. Tham khảo thôi vì phụ thuộc máy; Expanded mới là thước đo công bằng giữa các giải thuật.

@@ -1,0 +1,9 @@
+cd "d:\Dev\Workspaces\Vacuum World\c"
+gcc -O2 -o vacuum.exe vacuum.c
+.\vacuum.exe
+
+cd "d:\Dev\Workspaces\Vacuum World\web"
+node solver.js
+
+npx serve -p 8080
+http://localhost:8080/web/

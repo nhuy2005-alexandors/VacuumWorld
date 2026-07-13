@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vacuum World — Phân tích không gian trạng thái</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Thu vien qua CDN (yeu cau ro cua de): vis-network cho cay duyet, Chart.js cho bieu do -->
+  <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Vacuum World</h1>
+    <p class="sub">Phân tích không gian trạng thái &amp; so sánh giải thuật tìm kiếm mù (BFS / DFS / IDS) vs có thông tin (A*)</p>
+  </header>
+
+  <!-- ===================== PHAN A: PHAN TICH KHONG GIAN TRANG THAI ===================== -->
+  <section id="section-a">
+    <h2>A · Không gian trạng thái</h2>
+
+    <div class="grid-2col">
+      <div class="panel">
+        <h3>Lưới 5×5</h3>
+        <svg id="grid" viewBox="0 0 250 250" width="250" height="250" aria-label="Luoi vacuum world 5x5"></svg>
+        <p class="hint"><span class="legend robot">R</span> robot &nbsp; <span class="legend dirty">*</span> ô bẩn &nbsp; <span class="legend clean">.</span> ô sạch</p>
+        <div class="controls">
+          <button id="btn-random">Random bản đồ</button>
+          <button id="btn-reset-map">Bản đồ gốc</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Thông số không gian trạng thái</h3>
+        <table class="kv">
+          <tr><td>Số ô lưới</td><td class="num" id="kv-cells">25</td></tr>
+          <tr><td>Số ô bẩn ban đầu</td><td class="num" id="kv-dirty">4</td></tr>
+          <tr><td>KGTT đạt tới</td><td class="num" id="kv-space">25 × 2⁴ = 400</td></tr>
+          <tr><td>Branching factor tối đa</td><td class="num" id="kv-bf">5 hành động / node</td></tr>
+          <tr><td>Ô xuất phát robot</td><td class="num">0 (góc trên-trái)</td></tr>
+        </table>
+        <p class="hint">
+          Trạng thái = (vị trí robot, tập ô còn bẩn). Mỗi ô bẩn cần đúng 1 lần Suck;
+          robot đi Up/Down/Left/Right, chi phí mỗi bước = 1. Goal: sạch hết.
+        </p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="row-between">
+        <h3>Cây duyệt của giải thuật</h3>
+        <div class="controls">
+          <label>Giải thuật:
+            <select id="tree-algo">
+              <option value="BFS">BFS</option>
+              <option value="DFS">DFS</option>
+              <option value="A*h1">A* (h1)</option>
+              <option value="A*h2" selected>A* (h2)</option>
+              <option value="IDS">IDS (vòng lặp cuối)</option>
+            </select>
+          </label>
+          <label>Giới hạn node vẽ:
+            <input id="tree-cap" type="number" value="300" min="20" max="3000" step="20" />
+          </label>
+          <button id="btn-draw-tree">Vẽ cây</button>
+        </div>
+      </div>
+      <p class="hint">
+        Vẽ tất cả node được sinh ra (giới hạn để tránh nổ với IDS). Node đã duyệt (mở rộng) ghi <code>#thứ-tự-duyệt</code>;
+        node còn trong frontier (chưa duyệt) ghi <code>·</code> + viền đứt — không có con nên dừng ở đó.
+        Node <span class="tag goal">goal</span> và <span class="tag path">đường lời giải</span> (ngắn nhất) tô nổi bật.
+      </p>
+      <div id="tree" class="tree-canvas">Bấm "Vẽ cây" để hiển thị.</div>
+    </div>
+  </section>
+
+  <!-- ===================== PHAN B: SO SANH GIAI THUAT ===================== -->
+  <section id="section-b">
+    <h2>B · So sánh giải thuật</h2>
+
+    <div class="panel">
+      <div class="row-between">
+        <h3>Bảng số liệu</h3>
+        <div class="controls">
+          <button id="btn-run">Chạy lại (BFS/DFS/A*)</button>
+          <button id="btn-run-ids">Chạy IDS (~vài giây)</button>
+          <button id="btn-verify">Verify vs C</button>
+        </div>
+      </div>
+      <table id="cmp" class="cmp">
+        <thead>
+          <tr>
+            <th>Giải thuật</th>
+            <th class="num">SolLen</th>
+            <th class="num">Expanded</th>
+            <th class="num">Generated</th>
+            <th class="num">PeakFront</th>
+            <th class="num">Time (ms)</th>
+          </tr>
+        </thead>
+        <tbody id="cmp-body"></tbody>
+      </table>
+      <div id="verify-out" class="verify-out"></div>
+      <dl class="colnotes">
+        <dt>SolLen</dt><dd>số bước lời giải (nhỏ hơn = tốt; tối ưu = ngắn nhất).</dd>
+        <dt>Expanded</dt><dd>số node lấy ra khỏi frontier để mở rộng.</dd>
+        <dt>Generated</dt><dd>tổng số node con sinh ra.</dd>
+        <dt>PeakFront</dt><dd>kích thước frontier lớn nhất cùng lúc (~ đỉnh bộ nhớ).</dd>
+      </dl>
+    </div>
+
+    <div class="grid-2col">
+      <div class="panel">
+        <h3>Expanded (thang log)</h3>
+        <canvas id="chart-expanded" height="220"></canvas>
+        <p class="hint">Chú ý: IDS Expanded lớn hơn nhiều lần → dùng thang log để so sánh với các giải thuật khác.</p>
+      </div>
+      <div class="panel">
+        <h3>PeakFrontier</h3>
+        <canvas id="chart-peak" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="row-between">
+        <h3>Lời giải &amp; replay</h3>
+        <div class="controls">
+          <label>Giải thuật:
+            <select id="play-algo">
+              <option value="BFS">BFS</option>
+              <option value="DFS">DFS</option>
+              <option value="A*h1">A* (h1)</option>
+              <option value="A*h2" selected>A* (h2)</option>
+              <option value="IDS">IDS</option>
+            </select>
+          </label>
+          <button id="btn-play">▶ Play</button>
+          <button id="btn-step">Step</button>
+          <button id="btn-reset">Reset</button>
+        </div>
+      </div>
+      <div class="grid-2col">
+        <svg id="grid-play" viewBox="0 0 250 250" width="250" height="250" aria-label="Luoi replay"></svg>
+        <div>
+          <p class="hint">Chuỗi hành động (<span id="play-pos">0</span>/<span id="play-len">0</span>):</p>
+          <div id="sol-str" class="sol-str"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p class="hint">JS thuần (ES modules) + vis-network + Chart.js qua CDN · port từ <code>c/vacuum.c</code>.
+    Chạy: <code>python -m http.server</code> trong thư mục <code>web/</code>.</p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
