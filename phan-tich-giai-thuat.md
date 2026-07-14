@@ -1,19 +1,19 @@
 # Phân tích ưu / nhược điểm các giải thuật — Vacuum World
 
-Bài toán: lưới 5×5 (25 ô), robot xuất phát ô 0, 4 ô bẩn `[4, 12, 20, 24]`.
+Bài toán: lưới 3×3 (9 ô), robot xuất phát ô 0, 2 ô bẩn `[2, 6]`.
 Trạng thái = (vị trí robot, tập ô còn bẩn). 5 hành động Up/Down/Left/Right/Suck, chi phí mỗi bước = 1. Goal: sạch hết.
 
-## Số liệu thực đo (từ `web/solver.js`, self-test Node khớp 100%)
+## Số liệu thực đo (từ `web_3x3/solver.js`, self-test Node khớp 100%)
 
 | Giải thuật | SolLen | Expanded | Generated | PeakFront | Tối ưu? | Đầy đủ? |
 |------------|:------:|:--------:|:---------:|:---------:|:-------:|:-------:|
-| BFS        | **20** | 375      | 1232      | 44        | ✅       | ✅       |
-| DFS        | 24     | **24**   | —         | —         | ❌       | ✅¹      |
-| IDS        | **20** | 4508128  | —         | —         | ✅       | ✅       |
-| A* (h1)    | **20** | 361      | —         | —         | ✅       | ✅       |
-| A* (h2)    | **20** | **232**  | —         | —         | ✅       | ✅       |
+| BFS        | **8**  | 27       | 76        | 6         | ✅       | ✅       |
+| DFS        | 8      | **8**    | 21        | 7         | ❌       | ✅¹      |
+| IDS        | **8**  | 260      | 445       | 7         | ✅       | ✅       |
+| A* (h1)    | **8**  | 26       | 73        | 8         | ✅       | ✅       |
+| A* (h2)    | **8**  | **14**   | 39        | **5**     | ✅       | ✅       |
 
-¹ DFS đầy đủ vì có `closed` toàn cục (không lặp vô hạn) trên KGTT hữu hạn 400 trạng thái.
+¹ DFS đầy đủ vì có `closed` toàn cục (không lặp vô hạn) trên KGTT hữu hạn 36 trạng thái.
 
 Ghi chú độ phức tạp (b = branching ≤ 5, d = độ sâu lời giải, m = độ sâu tối đa):
 
@@ -36,8 +36,8 @@ Duyệt theo tầng, early goal-test khi sinh con (AIMA Fig 3.11).
 - Đơn giản, dễ chứng minh đúng.
 
 **Nhược:**
-- Bộ nhớ là điểm chết: `PeakFront=27` ở bài nhỏ, nhưng tăng theo cấp số nhân O(b^d). Lưới lớn hơn là hết RAM trước khi hết thời gian.
-- Không dùng thông tin về mục tiêu → mở rộng thừa (153 node, gấp ~1.4× A*h2).
+- Bộ nhớ là điểm chết: Tăng theo cấp số nhân O(b^d). Lưới lớn hơn là hết RAM trước khi hết thời gian.
+- Không dùng thông tin về mục tiêu → mở rộng thừa (27 node, gấp gần 2 lần A*h2).
 
 **Dùng khi:** chi phí bước đều, cần lời giải tối ưu, KGTT đủ nhỏ để chứa frontier.
 

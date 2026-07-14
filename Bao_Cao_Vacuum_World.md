@@ -24,7 +24,7 @@ Bài toán được mô hình hoá theo **5 thành phần** của bài toán tì
 | Thành phần | Mô tả |
 |---|---|
 | **Trạng thái (State)** | Bộ `(vị_trí_robot, tập_ô_còn_bẩn)` |
-| **Trạng thái khởi đầu (Initial State)** | Robot ở ô 0 (góc trên-trái), 4 ô bẩn cho trước |
+| **Trạng thái khởi đầu (Initial State)** | Robot ở ô 0 (góc trên-trái), 2 ô bẩn cho trước |
 | **Hành động (Actions)** | `{Up, Down, Left, Right, Suck}` — 5 hành động |
 | **Hàm chuyển trạng thái (Transition)** | Di chuyển → đổi vị trí robot; Suck ở ô bẩn → xoá ô đó khỏi tập bẩn |
 | **Kiểm tra mục tiêu (Goal Test)** | `tập_ô_bẩn = ∅` (sạch hết) |
@@ -47,16 +47,16 @@ Trạng thái được biểu diễn thông qua cấu trúc dữ liệu gồm 2 
 **Trong mã nguồn C (`c/vacuum.c`):**
 ```c
 typedef struct { 
-    int robot;         // Vị trí hiện tại của robot (từ 0 đến 11)
-    int dirt[4];       // Mảng 4 phần tử lưu vị trí 4 ô bẩn ban đầu
+    int robot;         // Vị trí hiện tại của robot (từ 0 đến 8)
+    int dirt[2];       // Mảng 2 phần tử lưu vị trí 2 ô bẩn ban đầu
 } State;
 ```
 
-**Trong mã nguồn JS (`web/solver.js`):**
+**Trong mã nguồn JS (`web_3x3/solver.js`):**
 ```javascript
 { 
     robot: 0, 
-    dirt: [3, 5, 8, 11] 
+    dirt: [2, 6] 
 }
 ```
 
@@ -64,11 +64,11 @@ typedef struct {
 - `robot`: Lưu toạ độ 1D của robot trên lưới (tính bằng công thức `cell = row × W + col`).
 - `dirt`: Lưu vị trí của các ô bẩn. 
   - Khi robot thực hiện hành động `Suck` (hút bụi) thành công tại một ô bẩn, giá trị tại vị trí đó trong mảng sẽ được gán bằng **`-1`** để đánh dấu là đã sạch.
-  - Ví dụ: Robot hút ô số 3, mảng sẽ trở thành `[-1, 5, 8, 11]`.
+  - Ví dụ: Robot hút ô số 2, mảng sẽ trở thành `[-1, 6]`.
 
-> **Ví dụ (lưới 5×5):** Robot ở ô 0, các ô bẩn {4, 12, 20, 24}
-> → `robot = 0`, `dirt = [4, 12, 20, 24]`. Sau khi hút xong ô 4:
-> → `dirt = [3, -1, 8, 11]` (slot 1 chuyển thành `-1`, các slot khác giữ nguyên vị trí).
+> **Ví dụ (lưới 3×3):** Robot ở ô 2, các ô bẩn {2, 6}
+> → `robot = 2`, `dirt = [2, 6]`. Sau khi hút xong ô 2:
+> → `dirt = [-1, 6]` (slot 0 chuyển thành `-1`, các slot khác giữ nguyên vị trí).
 
 ### 3.2. Kích thước không gian trạng thái
 
@@ -86,38 +86,20 @@ Trong đó:
 
 ### 3.3. Cấu hình cụ thể của dự án
 
-#### Lưới 5×5 (cấu hình web demo)
+#### Lưới 3×3 (cấu hình chung cho C và Web)
 
 ```
- R  .  .  .  *
- .  .  .  .  .
- .  .  *  .  .
- .  .  .  .  .
- *  .  .  .  *
+ R  .  *
+ .  .  .
+ *  .  .
 ```
 
 | Thông số | Giá trị |
 |---|---|
-| Kích thước lưới | 5 cột × 5 hàng = **25 ô** |
-| Số ô bẩn ban đầu | **4** ô: {4, 12, 20, 24} |
-| KGTT đạt tới (cận trên) | 25 × 2⁴ = **400 trạng thái** |
+| Kích thước lưới | 3 cột × 3 hàng = **9 ô** |
+| Số ô bẩn ban đầu | **2** ô: {2, 6} |
+| KGTT đạt tới (cận trên) | 9 × 2² = **36 trạng thái** |
 | Robot khởi đầu | Ô 0 (góc trên-trái) |
-
-#### Lưới 5×5 (cấu hình C gốc)
-
-```
- R  .  .  .  *
- .  .  .  .  .
- .  .  *  .  .
- .  .  .  .  .
- *  .  .  .  *
-```
-
-| Thông số | Giá trị |
-|---|---|
-| Kích thước lưới | 5 × 5 = **25 ô** |
-| Số ô bẩn ban đầu | **4** ô: {4, 12, 20, 24} |
-| KGTT đạt tới (cận trên) | 25 × 2⁴ = **400 trạng thái** |
 
 ### 3.4. Branching Factor
 
@@ -213,7 +195,7 @@ h₂(s) = h₁(s) + min_{i ∈ dirt, i ≠ -1} manhattan(robot, i)
 | Độ phức tạp không gian | O(b × m) — chỉ lưu đường đi hiện tại |
 
 **Ưu điểm:** Tiết kiệm bộ nhớ (PeakFrontier thấp).
-**Nhược điểm:** Không tối ưu — lời giải tìm được có thể dài hơn lời giải ngắn nhất. Trong cấu hình 5x5: DFS ra **24 bước** trong khi tối ưu là **20 bước**.
+**Nhược điểm:** Không đảm bảo tối ưu — lời giải tìm được có thể dài hơn lời giải ngắn nhất (Dù ở map 3x3 ngẫu nhiên tìm được đường tối ưu là 8 bước, nhưng với lưới lớn hơn dễ đi đường vòng).
 
 #### IDS — Iterative Deepening Search
 
@@ -230,7 +212,7 @@ h₂(s) = h₁(s) + min_{i ∈ dirt, i ≠ -1} manhattan(robot, i)
 - **Tiết kiệm bộ nhớ** như DFS (PeakFrontier ≈ độ sâu lời giải).
 
 **Nhược điểm:**
-- Expanded **rất cao** vì mỗi vòng limit phải duyệt lại từ đầu. Trong cấu hình 5x5: Expanded = **4,508,128** (so với BFS chỉ 375).
+- Expanded **rất cao** vì mỗi vòng limit phải duyệt lại từ đầu. Trong cấu hình 3x3: Expanded = **260** (so với BFS chỉ 27).
 
 > [!IMPORTANT]
 > IDS dùng **cycle-check trên đường đi** (không phải closed set toàn cục) để giữ tính tối ưu. Nếu dùng closed set toàn cục, IDS sẽ bỏ lỡ đường tối ưu qua node đã thăm ở vòng limit trước.
@@ -265,36 +247,33 @@ h₂(s) = h₁(s) + min_{i ∈ dirt, i ≠ -1} manhattan(robot, i)
 
 ## 7. Kết quả thực nghiệm
 
-### 7.1. Cấu hình 5×5 (25 ô, 4 ô bẩn — web demo)
+### 7.1. Cấu hình 3×3 (9 ô, 2 ô bẩn)
 
 | Giải thuật | SolLen | Expanded | Generated | PeakFrontier | Tối ưu? |
 |---|---|---|---|---|---|
-| **BFS** | 20 | 375 | 1232 | 44 | ✅ |
-| **DFS** | 24 | 24 | — | — | ❌ |
-| **IDS** | 20 | 4,508,128 | — | — | ✅ |
-| **A\*(h₁)** | 20 | 361 | — | — | ✅ |
-| **A\*(h₂)** | 20 | 232 | — | — | ✅ |
+| **BFS** | 8 | 27 | 76 | 6 | ✅ |
+| **DFS** | 8 | 8 | 21 | 7 | ❌ |
+| **IDS** | 8 | 260 | 445 | 7 | ✅ |
+| **A\*(h₁)** | 8 | 26 | 73 | 8 | ✅ |
+| **A\*(h₂)** | 8 | 14 | 39 | 5 | ✅ |
 
 ### 7.2. Phân tích kết quả
 
 #### Về độ dài lời giải (SolLen)
-- BFS, IDS, A*(h₁), A*(h₂) đều ra **20 bước** → đều **tối ưu**.
-- DFS ra **24 bước** → **không tối ưu** (dài hơn 4 bước).
+- Cả 5 thuật toán đều ra **8 bước** (đối với bản đồ 3x3 này vô tình DFS tìm được đường đi tối ưu). Tuy nhiên về mặt lý thuyết DFS không được coi là thuật toán đảm bảo tính tối ưu.
 
 #### Về số node mở rộng (Expanded)
 ```
-A*(h₂) < A*(h₁) < BFS << IDS << DFS(không so sánh được vì khác mục tiêu)
-  232     361      375   4,508,128
+DFS < A*(h₂) < A*(h₁) < BFS << IDS
+ 8      14       26      27    260
 ```
 
-- **A\*(h₂) hiệu quả nhất**: chỉ 232 node, ít hơn BFS **38%** nhờ heuristic dẫn đường.
-- **A\*(h₁) vs A\*(h₂)**: h₂ tiết kiệm **35%** so với h₁ — minh chứng heuristic thông tin hơn → ít duyệt hơn.
-- **IDS tốn nhất**: 4,508,128 node — gấp **12,021 lần** BFS — vì phải lặp lại từ gốc mỗi vòng limit. Đây là cái giá của việc tiết kiệm bộ nhớ.
+- **A\*(h₂) hiệu quả nhất** (trong các thuật toán tìm kiếm tối ưu): chỉ 14 node, ít hơn BFS gần **50%** nhờ heuristic dẫn đường.
+- **A\*(h₁) vs A\*(h₂)**: h₂ tiết kiệm gần **50%** số node so với h₁ — minh chứng heuristic thông tin hơn → ít duyệt hơn.
+- **IDS tốn nhất**: 260 node — gấp gần **10 lần** BFS — vì phải lặp lại từ gốc mỗi vòng limit. Đây là cái giá của việc tiết kiệm bộ nhớ.
 
 #### Về bộ nhớ đỉnh (PeakFrontier)
-- **IDS thấp nhất** (≈ độ sâu lời giải = 20) — lợi thế lớn.
-- **BFS cao nhất** (44 node trong frontier cùng lúc).
-- IDS hy sinh thời gian (Expanded cao) để đổi lấy bộ nhớ thấp.
+- Ở cấu hình 3x3 do không gian quá nhỏ nên PeakFrontier không chênh lệch rõ ràng (đều ở mức 5-8 node). Trên thực tế ở lưới lớn hơn, BFS sẽ "ngốn" bộ nhớ đỉnh cực kỳ lớn.
 
 ---
 
@@ -315,7 +294,7 @@ A*(h₂) < A*(h₁) < BFS << IDS << DFS(không so sánh được vì khác mục
 1. **A\*(h₂) là giải thuật tốt nhất** nếu có heuristic: tối ưu, ít duyệt nhất.
 2. **IDS là lựa chọn tốt nhất cho tìm kiếm mù** khi bộ nhớ hạn chế: tối ưu như BFS, bộ nhớ O(bd) như DFS.
 3. **DFS chỉ nên dùng khi chỉ cần tìm _một_ lời giải bất kỳ** (không cần ngắn nhất) và ưu tiên tốc độ/bộ nhớ.
-4. **Heuristic thông tin hơn = ít duyệt hơn**: h₂ > h₁ → A*(h₂) expanded 232 < A*(h₁) expanded 361.
+4. **Heuristic thông tin hơn = ít duyệt hơn**: h₂ > h₁ → A*(h₂) expanded 14 < A*(h₁) expanded 26.
 
 ---
 

@@ -19,12 +19,12 @@
 #include <limits.h>
 #include <time.h>
 
-/* ---------- Cau hinh bai toan (5x5) ---------- */
-#define W 5
-#define H 5
+/* ---------- Cau hinh bai toan (3x3) ---------- */
+#define W 3
+#define H 3
 #define NCELL (W * H)
 #define START_CELL 0                 /* robot xuat phat o (0,0) */
-static const int DIRTY_CELLS[] = {4, 12, 20, 24};  /* 4 o ban ban dau */
+static const int DIRTY_CELLS[] = {2, 6};  /* 2 o ban ban dau */
 #define NDIRTY ((int)(sizeof(DIRTY_CELLS) / sizeof(DIRTY_CELLS[0])))
 
 /* ---------- Hanh dong ---------- */
@@ -262,16 +262,22 @@ static Metrics ids(State start, int *sol) {
 
 /* ======================= A* (co thong tin) ======================= */
 /* Min-heap theo f = g + h. Lazy deletion: bo qua node da nam trong closed. */
-typedef struct { int f, node; } HeapItem;
+typedef struct { int f, g, node; } HeapItem;
 static HeapItem heap[POOL_CAP];
 static int heap_n;
 
-static void heap_push(int f, int node) {
+static inline int is_higher(HeapItem a, HeapItem b) {
+    if (a.f != b.f) return a.f < b.f;
+    if (a.g != b.g) return a.g > b.g;
+    return a.node < b.node;
+}
+
+static void heap_push(int f, int g, int node) {
     int i = heap_n++;
-    heap[i] = (HeapItem){f, node};
+    heap[i] = (HeapItem){f, g, node};
     while (i > 0) {                              /* sift-up */
         int p = (i - 1) / 2;
-        if (heap[p].f <= heap[i].f) break;
+        if (!is_higher(heap[i], heap[p])) break;
         HeapItem t = heap[p]; heap[p] = heap[i]; heap[i] = t; i = p;
     }
 }
@@ -281,8 +287,8 @@ static HeapItem heap_pop(void) {
     int i = 0;
     for (;;) {                                   /* sift-down */
         int l = 2 * i + 1, r = 2 * i + 2, s = i;
-        if (l < heap_n && heap[l].f < heap[s].f) s = l;
-        if (r < heap_n && heap[r].f < heap[s].f) s = r;
+        if (l < heap_n && is_higher(heap[l], heap[s])) s = l;
+        if (r < heap_n && is_higher(heap[r], heap[s])) s = r;
         if (s == i) break;
         HeapItem t = heap[s]; heap[s] = heap[i]; heap[i] = t; i = s;
     }
@@ -295,7 +301,7 @@ static Metrics astar(State start, int (*h)(State), int *sol) {
     pool_n = 0; heap_n = 0; hm_reset(&g_closed); hm_reset(&g_bestg);
     int root = pool_add(start, -1, -1, 0);
     hm_put(&g_bestg, state_key(start), 0);
-    heap_push(0 + h(start), root);
+    heap_push(0 + h(start), 0, root);
 
     while (heap_n > 0) {
         if (heap_n > m.peak_frontier) m.peak_frontier = heap_n;
@@ -311,11 +317,12 @@ static Metrics astar(State start, int (*h)(State), int *sol) {
             State ns;
             if (!apply_action(s, a, &ns)) continue;
             m.generated++;
-            int ng = pool[cur].g + 1, old;
+            int ng = pool[cur].g + 1;
             uint64_t nk = state_key(ns);
-            if (hm_get(&g_bestg, nk, &old) && ng >= old) continue;  /* co duong tot hon */
+            int old;
+            if (hm_get(&g_bestg, nk, &old) && ng >= old) continue;
             hm_put(&g_bestg, nk, ng);
-            heap_push(ng + h(ns), pool_add(ns, cur, a, ng));
+            heap_push(ng + h(ns), ng, pool_add(ns, cur, a, ng));
         }
     }
     m.ms = (double)(clock() - t0) / CLOCKS_PER_SEC * 1000.0;

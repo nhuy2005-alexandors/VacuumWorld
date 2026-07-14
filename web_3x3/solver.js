@@ -248,16 +248,22 @@ export function ids(start = initialState(), opt = {}) {
 }
 
 // ======================= A* (co thong tin) =======================
-// Min-heap theo f = g + h, so sanh CHI theo f (khop heap trong C -> khop Expanded).
+// Stable Priority Queue: uu tien f nho, roi g lon (sau hon), roi node nho (sinh truoc).
+function isHigher(a, b) {
+  if (a.f !== b.f) return a.f < b.f;
+  if (a.g !== b.g) return a.g > b.g;
+  return a.node < b.node;
+}
+
 // Lazy deletion: bo qua node da nam trong closed khi pop.
 class MinHeapF {
   constructor() { this.a = []; }
   get size() { return this.a.length; }
-  push(item) {                                   // item = {f, node}
+  push(item) {                                   // item = {f, g, node}
     const a = this.a; let i = a.length; a.push(item);
-    while (i > 0) {                              // sift-up (<= giong C)
+    while (i > 0) {                              // sift-up
       const p = (i - 1) >> 1;
-      if (a[p].f <= a[i].f) break;
+      if (!isHigher(a[i], a[p])) break;
       [a[p], a[i]] = [a[i], a[p]]; i = p;
     }
   }
@@ -268,8 +274,8 @@ class MinHeapF {
       a[0] = last; let i = 0;
       for (;;) {                                 // sift-down
         const l = 2 * i + 1, r = 2 * i + 2; let s = i;
-        if (l < a.length && a[l].f < a[s].f) s = l;
-        if (r < a.length && a[r].f < a[s].f) s = r;
+        if (l < a.length && isHigher(a[l], a[s])) s = l;
+        if (r < a.length && isHigher(a[r], a[s])) s = r;
         if (s === i) break;
         [a[s], a[i]] = [a[i], a[s]]; i = s;
       }
@@ -290,7 +296,7 @@ export function astar(start = initialState(), h = h1) {
   };
   const root = push(start, -1, -1, 0);
   bestg.set(stateKey(start), 0);
-  heap.push({ f: 0 + h(start), node: root });
+  heap.push({ f: 0 + h(start), g: 0, node: root });
   let goalId = -1, ord = 0;
   while (heap.size > 0) {
     if (heap.size > m.peakFrontier) m.peakFrontier = heap.size;
@@ -311,7 +317,7 @@ export function astar(start = initialState(), h = h1) {
       const nk = stateKey(ns);
       if (bestg.has(nk) && ng >= bestg.get(nk)) continue;  // co duong tot hon
       bestg.set(nk, ng);
-      heap.push({ f: ng + h(ns), node: push(ns, cur, a, ng) });
+      heap.push({ f: ng + h(ns), g: ng, node: push(ns, cur, a, ng) });
     }
   }
   const solution = goalId >= 0 ? reconstruct(nodes, goalId) : null;
